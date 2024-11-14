@@ -1,0 +1,79 @@
+require 'rspec'
+
+class LRUCache
+  def initialize(capacity)
+    @capacity = capacity
+    @cache = {}
+    @usage_order = []
+  end
+
+  # Метод для отримання значення по ключу
+  def get(key)
+    return "nil" unless @cache.key?(key)  # Повертаємо рядок "nil"
+    
+    # Оновлюємо порядок використання
+    @usage_order.delete(key)
+    @usage_order << key
+    @cache[key]
+  end
+
+  # Метод для додавання пари ключ-значення
+  def put(key, value)
+    if @cache.key?(key)
+      # Оновлюємо значення та порядок використання
+      @usage_order.delete(key)
+    elsif @cache.size >= @capacity
+      # Видаляємо найменш недавно використовуваний елемент
+      oldest_key = @usage_order.shift
+      @cache.delete(oldest_key)
+    end
+
+    # Додаємо нове значення та оновлюємо порядок використання
+    @cache[key] = value
+    @usage_order << key
+  end
+end
+
+RSpec.describe LRUCache do
+  let(:cache) { LRUCache.new(2) }
+
+  it 'returns "nil" for missing keys' do
+    expect(cache.get(1)).to eq("nil")
+  end
+
+  it 'stores and retrieves values' do
+    cache.put(1, 1)
+    expect(cache.get(1)).to eq(1)
+  end
+
+  it 'removes the least recently used item when capacity is exceeded' do
+    cache.put(1, 1)
+    cache.put(2, 2)
+    expect(cache.get(1)).to eq(1)  # Key 1 is the most recently used
+
+    cache.put(3, 3)  # Should evict key 2
+    expect(cache.get(2)).to eq("nil")  # Key 2 should be evicted
+    expect(cache.get(3)).to eq(3)  # Key 3 should still be accessible
+  end
+
+  it 'updates the value of an existing key and marks it as recently used' do
+    cache.put(1, 1)
+    cache.put(2, 2)
+    cache.put(1, 10)  # Update key 1's value to 10
+
+    cache.put(3, 3)  # Should evict key 2
+    expect(cache.get(1)).to eq(10)  # Key 1 should return updated value
+    expect(cache.get(2)).to eq("nil")  # Key 2 should be evicted
+    expect(cache.get(3)).to eq(3)  # Key 3 should still be accessible
+  end
+
+  it 'maintains the order of usage' do
+    cache.put(1, 1)
+    cache.put(2, 2)
+    cache.get(1)  # Access key 1 to make it recently used
+    cache.put(3, 3)  # Should evict key 2
+    expect(cache.get(2)).to eq("nil")  # Key 2 should be evicted
+    expect(cache.get(1)).to eq(1)  # Key 1 should still be accessible
+    expect(cache.get(3)).to eq(3)  # Key 3 should still be accessible
+  end
+end
